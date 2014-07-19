@@ -52,7 +52,6 @@ class Github extends EventEmitter
   constructor: (owner) ->
     cs.info '\n\n@@Github::constructor ->'
     @whitelist = @getDataFile('repos')
-    console.log "@whitelist: ", @whitelist
     @owner = owner
     @getRepos()
     setInterval =>
@@ -64,7 +63,7 @@ class Github extends EventEmitter
       filepath = path.join(basePath, 'data', file + '.yaml')
       doc = yaml.safeLoad(fs.readFileSync(filepath, 'utf8'))
     catch err
-      console.log(err)
+      cs.debug(err)
 
   setRepos: (repos) -> @repos = repos
 
@@ -77,16 +76,16 @@ class Github extends EventEmitter
     return null
 
   getRepos: ->
-    console.log "getRepos: ->"
+    cs.debug "getRepos: ->"
     org = client.org(@owner)
     self = this
     org.repos (err, array, headers) =>
       if err && err.statusCode == 403
         client = github.client(getKey())
         self.getRepos()
-        console.log "github::getRepos: ERROR: 403"
+        cs.debug "github::getRepos: ERROR: 403"
         return
-      else console.log "github::getRepos: SUCCESS"
+      else cs.debug "github::getRepos: SUCCESS"
       array = @filterForBlacklist(array)
 
       for repo, i in array
@@ -108,7 +107,9 @@ class Github extends EventEmitter
       name              : repo.name
       git_url           : repo.git_url
       html_url          : repo.html_url
+      ssh_url           : repo.ssh_url
       issues_url        : "#{repo.html_url}/issues"
+      branches          : null
       open_issues_count : repo.open_issues_count
       pushed_at         : repo.pushed_at
       recent_update     : false
@@ -124,11 +125,21 @@ class Github extends EventEmitter
     else
       @repos.push(payload)
 
+    @runCommand("branches", payload)
 
     self = @
-    watch payload, "recent_update", (key, command, data) ->
-      self.emit("UPDATE", this)
-    @emit("UPDATE", payload)
+    watch payload, (key, command, data) ->
+      switch key
+        when "branches"
+          try
+            for branch, i in data
+              branch.html_url = "#{this.html_url}/tree/#{branch.name}"
+              branch.download_url = "#{this.git_url}\##{branch.name}"
+          catch err
+            self.emit("MESSAGE:ADD", err.message)
+        when "recent_update"
+          self.emit("UPDATE", this)
+      self.emit("UPDATE", payload)
 
   checkForRecentUpdate: (payload, callback) ->
     try
@@ -139,7 +150,7 @@ class Github extends EventEmitter
         delta = Math.abs(now - past) / 1000
         callback(payload, Math.floor(delta / 3600) < 12, data.commit.message)
     catch err
-      console.log err
+      cs.debug err
 
   getAddonVersion: (payload, callback) ->
     repo = client.repo("#{@owner}/#{payload.name}")
@@ -148,9 +159,16 @@ class Github extends EventEmitter
         version = VM.getVersion(data.content) if data? and data.content?
         callback(payload, version)
       catch err
-        console.log err
+        cs.debug err
       # callback
 
+
+  filterForWhitelist: (array) ->
+    self = this
+    repos = array.filter (repo) ->
+      n = 0
+      self.blacklist.map (name) => n += (repo.name == name)
+      return repo if n > 0
 
   filterForBlacklist: (array) ->
     self = this
