@@ -17,7 +17,7 @@ class WebServer
     @app    = express()
     @server = http.createServer(@app)
     @configureServer()
-    @setupRoutes()
+    @setupRoutes(github)
 
   configureServer: ->
     @app.engine('.html', require('hbs').__express)
@@ -36,13 +36,13 @@ class WebServer
     catch err
       console.log(err)
 
-  setupRoutes: ->
+  setupRoutes: (github) ->
     repos = @getDataFile('repos')
 
     @app.get '/', (req, res) =>
       res.render(path.join(generatedPath, 'index.html'))
 
-    @app.get '/repos', (req, res) -> res.send(gh.repos)
+    @app.get '/repos', (req, res) -> res.send(github.repos)
 
 
 

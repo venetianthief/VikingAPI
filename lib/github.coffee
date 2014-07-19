@@ -19,7 +19,10 @@ keys = [
   "96234b48504bcb43a1d0a9e11cd7e596b45f4e54"
   "16cd039c3347e9689bf2e7d3eccdcfb627bec2fc"
   "3fe23a32720c1d08a38dc488c3e5128ea809fdaa"]
-client = github.client(keys[Math.floor(Math.random() * keys.length + 1)])
+
+getKey = -> return keys[Math.floor(Math.random() * keys.length + 1)]
+
+client = github.client(getKey())
 
 class Github extends EventEmitter
 
@@ -35,7 +38,12 @@ class Github extends EventEmitter
   repos: []
   owner: null
 
-  constructor: (owner) -> @owner = owner
+  constructor: (owner) ->
+    @owner = owner
+    @getRepos()
+    setInterval =>
+      @getRepos()
+    , 16000
 
   setRepos: (repos) -> @repos = repos
 
@@ -50,15 +58,18 @@ class Github extends EventEmitter
   getRepos: ->
     org = client.org(@owner)
     org.repos (err, array, headers) =>
-      if err
-        console.log err
+      if err && err.statusCode == 403
+        client = github.client(getKey(), -> @getRepos())
+        console.log "403!!!"
         return
+      else console.log "SUCCESS"
       array = @filterForBlacklist(array)
 
       for repo, i in array
         @initRepo(repo, i)
 
       @sort(@repos)
+      console.log "repos: ", @repos
 
   setUpdated: (payload, updated, tooltip) ->
     payload.tooltip = tooltip
