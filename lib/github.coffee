@@ -37,6 +37,8 @@ class Github extends EventEmitter
     "VikingDocs"
     "VikingWarriorResource"
     "VikingStalkerResource"
+    "vikingcli"
+    "VikingAPI"
   ]
 
   whitelist: []
