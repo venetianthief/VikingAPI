@@ -1,12 +1,15 @@
 _            = require('underscore')
 path         = require('path')
+cs           = require('calmsoul')
 fs           = require('fs')
 github       = require('octonode')
+yaml         = require('js-yaml')
 WatchJS      = require("watchjs")
 watch        = WatchJS.watch
 unwatch      = WatchJS.unwatch
 callWatchers = WatchJS.callWatchers
 EventEmitter = require('events').EventEmitter
+VM           = require('./version-manager.coffee')
 
 # this is a generic token
 # 894b9db89f78b7142263966c69cabf63cec31a19
@@ -22,7 +25,8 @@ keys = [
 
 getKey = -> return keys[Math.floor(Math.random() * keys.length + 1)]
 
-client = github.client(getKey())
+client   = github.client(getKey())
+basePath = path.join(__dirname, '..')
 
 class Github extends EventEmitter
 
@@ -35,15 +39,27 @@ class Github extends EventEmitter
     "VikingStalkerResource"
   ]
 
+  whitelist: []
+
   repos: []
   owner: null
 
   constructor: (owner) ->
+    cs.info '\n\n@@Github::constructor ->'
+    @whitelist = @getDataFile('repos')
+    console.log "@whitelist: ", @whitelist
     @owner = owner
     @getRepos()
     setInterval =>
       @getRepos()
     , 16000
+
+  getDataFile: (file) ->
+    try
+      filepath = path.join(basePath, 'data', file + '.yaml')
+      doc = yaml.safeLoad(fs.readFileSync(filepath, 'utf8'))
+    catch err
+      console.log(err)
 
   setRepos: (repos) -> @repos = repos
 
@@ -56,24 +72,29 @@ class Github extends EventEmitter
     return null
 
   getRepos: ->
+    console.log "getRepos: ->"
     org = client.org(@owner)
+    self = this
     org.repos (err, array, headers) =>
       if err && err.statusCode == 403
-        client = github.client(getKey(), -> @getRepos())
-        console.log "403!!!"
+        client = github.client(getKey())
+        self.getRepos()
+        console.log "github::getRepos: ERROR: 403"
         return
-      else console.log "SUCCESS"
+      else console.log "github::getRepos: SUCCESS"
       array = @filterForBlacklist(array)
 
       for repo, i in array
         @initRepo(repo, i)
 
       @sort(@repos)
-      console.log "repos: ", @repos
 
   setUpdated: (payload, updated, tooltip) ->
     payload.tooltip = tooltip
     payload.recent_update = updated
+
+  setVersion: (payload, version) ->
+    payload.version = version
 
   initRepo: (repo, i) ->
     payload =
@@ -87,14 +108,17 @@ class Github extends EventEmitter
       pushed_at         : repo.pushed_at
       recent_update     : false
       tooltip           : null
+      version           : null
 
     @checkForRecentUpdate(payload, @setUpdated.bind(payload))
+    @getAddonVersion(payload, @setVersion.bind(payload))
 
     index = @findRepo(repo)
     if index?
       @repos[index] = payload
     else
       @repos.push(payload)
+
 
     self = @
     watch payload, "recent_update", (key, command, data) ->
@@ -111,6 +135,16 @@ class Github extends EventEmitter
         callback(payload, Math.floor(delta / 3600) < 12, data.commit.message)
     catch err
       console.log err
+
+  getAddonVersion: (payload, callback) ->
+    repo = client.repo("#{@owner}/#{payload.name}")
+    repo.contents 'toc.xml', (err, data, headers) =>
+      try
+        version = VM.getVersion(data.content) if data? and data.content?
+        callback(payload, version)
+      catch err
+        console.log err
+      # callback
 
 
   filterForBlacklist: (array) ->

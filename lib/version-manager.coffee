@@ -1,16 +1,16 @@
 fs           = require('fs')
 xml2js       = require('xml2js')
 EventEmitter = require('events').EventEmitter
-
-parser  = new xml2js.Parser()
-fs.readFile 'data/toc.xml', (err, data) ->
-  parser.parseString data, (err, result) ->
-    console.log "toc.xml contents: "
-    console.dir result
-    console.log "\nVersion: ", result.Addon.$.Version
-    console.log 'Done.'
+parser       = new xml2js.Parser()
 
 class VersionManager extends EventEmitter
-  constructor: ->
+  constructor: -> return
+  getVersion: (data) ->
+    xml = new Buffer(data, 'base64').toString('ascii')
+    version = undefined
+    parser.parseString xml, (err, result) =>
+      version = result.Addon.$.Version or "nil"
+    return version
 
-module.exports = VersionManager
+
+module.exports = new VersionManager()
