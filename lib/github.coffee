@@ -32,13 +32,16 @@ class Github extends EventEmitter
 
   blacklist: [
     "AddonDownloader"
-    "vikinghug.com"
-    "VikingBuddies"
-    "VikingDocs"
-    "VikingWarriorResource"
-    "VikingStalkerResource"
-    "vikingcli"
     "VikingAPI"
+    "VikingBuddies"
+    "vikingcli"
+    "VikingDatachron"
+    "VikingDocs"
+    "vikinghug.com"
+    "VikingRaidFrame"
+    "VikingSet"
+    "VikingStalkerResource"
+    "VikingWarriorResource"
   ]
 
   whitelist: []
