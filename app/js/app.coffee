@@ -26,16 +26,6 @@ $ ->
       scrollTop: position
     , Math.floor time
 
-
-  vex.defaultOptions.className = 'vex-theme-vikinghug'
-  $("[data-screenshot]").on 'click', (e) ->
-    e.preventDefault()
-
-    vex.open
-      content: $(this).html()
-      afterOpen: ($vexContent) ->
-        $vexContent.append $vexContent.content
-
   _gotoAnchor   = _.throttle gotoAnchor, 500, { trailing: false }
   _handleScroll = _.throttle handleScroll, 300, true
   _toggleMenu   = _.throttle toggleMenu, 300, true
