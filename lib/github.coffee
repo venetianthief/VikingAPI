@@ -145,6 +145,12 @@ class Github extends EventEmitter
     try
       repo = client.repo("#{@owner}/#{payload.name}")
       repo.commit 'master', (err, data, headers) =>
+        if err && err.statusCode == 403
+          client = github.client(getKey())
+          self.checkForRecentUpdate(payload, callback)
+          cs.debug "github::checkForRecentUpdate: ERROR: 403"
+          return
+        else cs.debug "github::checkForRecentUpdate: SUCCESS"
         past  = new Date(data.commit.author.date).getTime()
         now   = new Date().getTime()
         delta = Math.abs(now - past) / 1000
@@ -155,6 +161,12 @@ class Github extends EventEmitter
   getAddonVersion: (payload, callback) ->
     repo = client.repo("#{@owner}/#{payload.name}")
     repo.contents 'toc.xml', (err, data, headers) =>
+      if err && err.statusCode == 403
+        client = github.client(getKey())
+        self.getAddonVersion(payload, callback)
+        cs.debug "github::getAddonVersion: ERROR: 403"
+        return
+      else cs.debug "github::getAddonVersion: SUCCESS"
       try
         version = VM.getVersion(data.content) if data? and data.content?
         callback(payload, version)
