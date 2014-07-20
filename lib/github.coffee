@@ -33,6 +33,9 @@ getKey = -> return keys[Math.floor(Math.random() * keys.length)]
 client   = github.client(getKey())
 basePath = path.join(__dirname, '..')
 
+cs.set
+  info: false
+
 class Github extends EventEmitter
 
   blacklist: [
