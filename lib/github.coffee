@@ -54,10 +54,15 @@ class Github extends EventEmitter
   repos: []
   owner: null
 
+  queue: []
+
   constructor: (owner) ->
     cs.info '\n\n@@Github::constructor ->'
     @whitelist = @getDataFile('repos')
     @owner = owner
+
+    @clearQueue = _.throttle(@_clearQueue, 200)
+
     @getRepos()
     setInterval =>
       @getRepos()
@@ -81,16 +86,16 @@ class Github extends EventEmitter
     return null
 
   getRepos: ->
-    cs.debug "getRepos: ->"
+    cs.info "getRepos: ->", getKey()
     org = client.org(@owner)
     self = this
     org.repos (err, array, headers) =>
       if err && err.statusCode == 403
         client = github.client(getKey())
         self.getRepos()
-        cs.debug "github::getRepos: ERROR: 403"
+        cs.info "github::getRepos: ERROR: 403"
         return
-      else cs.debug "github::getRepos: SUCCESS"
+      else cs.info "github::getRepos: SUCCESS"
       array = @filterForBlacklist(array)
 
       for repo, i in array
@@ -101,9 +106,6 @@ class Github extends EventEmitter
   setUpdated: (payload, updated, tooltip) ->
     payload.tooltip = tooltip
     payload.recent_update = updated
-
-  setVersion: (payload, version) ->
-    payload.version = version
 
   initRepo: (repo, i) ->
     payload =
@@ -122,7 +124,6 @@ class Github extends EventEmitter
       version           : null
 
     @checkForRecentUpdate(payload, @setUpdated.bind(payload))
-    @getAddonVersion(payload, @setVersion.bind(payload))
 
     index = @findRepo(repo)
     if index?
@@ -130,21 +131,8 @@ class Github extends EventEmitter
     else
       @repos.push(payload)
 
-    @runCommand("branches", payload)
+    @runCommand("branches", payload, @updateBranches)
 
-    self = @
-    watch payload, (key, command, data) ->
-      switch key
-        when "branches"
-          try
-            for branch, i in data
-              branch.html_url = "#{this.html_url}/tree/#{branch.name}"
-              branch.download_url = "#{this.git_url}\##{branch.name}"
-          catch err
-            self.emit("MESSAGE:ADD", err.message)
-        when "recent_update"
-          self.emit("UPDATE", this)
-      self.emit("UPDATE", payload)
 
   checkForRecentUpdate: (payload, callback) ->
     try
@@ -164,22 +152,65 @@ class Github extends EventEmitter
     catch err
       cs.debug err
 
-  getAddonVersion: (payload, callback) ->
+
+  addToQueue: (fn, args...) ->
+    @queue.push([fn, args])
+
+  _clearQueue: ->
+    console.log "_clearQueue", @queue.length
+    if @queue.length > 0
+      try
+        fn = @queue.shift()
+        fn[1].push(@clearQueue)
+        fn[0].apply(this, fn[1])
+      catch err
+        console.log err
+        @emit('MESSAGE:ADD', err.message)
+    else
+      console.log "all done"
+      @emit('MESSAGE:ADD', "ALL DONE!")
+
+  done: ->
+    console.log "done"
+    @clearQueue()
+
+  updateBranches: (payload, callback) ->
     self = this
     repo = client.repo("#{@owner}/#{payload.name}")
-    repo.contents 'toc.xml', (err, data, headers) =>
+    for branch, i in payload.branches
+      branch.html_url = "#{payload.html_url}/tree/#{branch.name}"
+      branch.download_url = "#{payload.git_url}\##{branch.name}"
+      @addToQueue(@getBranchVersion, repo, payload, branch, @setBranchVersion)
+    @clearQueue()
+
+  setMasterVersion: (payload, version) ->
+    payload.version = version ? "nil"
+
+  getBranchVersion: (repo, payload, branch, callback) ->
+    console.log "getBranchVersion"
+    self = this
+    repo.contents 'toc.xml', branch.name, (err, data, headers) =>
       if err && err.statusCode == 403
         client = github.client(getKey())
-        self.getAddonVersion(payload, callback)
-        cs.debug "github::getAddonVersion: ERROR: 403"
+        self.getBranchVersion(repo, payload, branch, callback)
+        cs.debug "github::getAddonVersions: ERROR: 403"
         return
-      else cs.debug "github::getAddonVersion: SUCCESS"
+      else cs.debug "github::getAddonVersions: SUCCESS"
       try
         version = VM.getVersion(data.content) if data? and data.content?
-        callback(payload, version)
+        version = if version < branch.version then branch.version else version
+        callback.apply(self, [payload, branch, version, self.done]) if callback
+        return
       catch err
         cs.debug err
       # callback
+
+  setBranchVersion: (payload, branch, version, callback) ->
+    b = _.findWhere(payload.branches, {name: branch.name})
+    console.log "setBranchVersion", "#{payload.name}:#{b.name} = #{version}"
+    _.extend(branch, {version: version})
+    @setMasterVersion(payload, version) if branch.name == "master"
+    callback.apply(this) if callback
 
 
   filterForWhitelist: (array) ->
@@ -207,10 +238,13 @@ class Github extends EventEmitter
       else
         return 0
 
-  runCommand: (command, data) ->
+  runCommand: (command, data, callback) ->
     repo = client.repo("#{data.owner}/#{data.name}")
     repo[command] (err, response, headers) =>
-      data[command] = response
+      obj = {}
+      obj[command] = response
+      _.extend( data, obj )
+      callback.apply(this, [data]) if callback?
 
 
 
