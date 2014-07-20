@@ -143,6 +143,7 @@ class Github extends EventEmitter
 
   checkForRecentUpdate: (payload, callback) ->
     try
+      self = this
       repo = client.repo("#{@owner}/#{payload.name}")
       repo.commit 'master', (err, data, headers) =>
         if err && err.statusCode == 403
@@ -159,6 +160,7 @@ class Github extends EventEmitter
       cs.debug err
 
   getAddonVersion: (payload, callback) ->
+    self = this
     repo = client.repo("#{@owner}/#{payload.name}")
     repo.contents 'toc.xml', (err, data, headers) =>
       if err && err.statusCode == 403
