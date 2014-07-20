@@ -21,9 +21,14 @@ keys = [
   "894b9db89f78b7142263966c69cabf63cec31a19"
   "96234b48504bcb43a1d0a9e11cd7e596b45f4e54"
   "16cd039c3347e9689bf2e7d3eccdcfb627bec2fc"
-  "3fe23a32720c1d08a38dc488c3e5128ea809fdaa"]
+  "3fe23a32720c1d08a38dc488c3e5128ea809fdaa"
+  "684de5ec8b53c6dafc141c0a6b04c3b5ea13cae9"
+  "217c16b8d336c8d3a4bcba502cac2496c5a234e8"
+  "9bcf601037685ba1c8b87b5ce2fd4155529986cf"
+  "696ebed17e1317d0833aac574045d95df74c3432"]
 
-getKey = -> return keys[Math.floor(Math.random() * keys.length + 1)]
+
+getKey = -> return keys[Math.floor(Math.random() * keys.length)]
 
 client   = github.client(getKey())
 basePath = path.join(__dirname, '..')
