@@ -157,22 +157,17 @@ class Github extends EventEmitter
     @queue.push([fn, args])
 
   _clearQueue: ->
-    console.log "_clearQueue", @queue.length
     if @queue.length > 0
       try
         fn = @queue.shift()
         fn[1].push(@clearQueue)
         fn[0].apply(this, fn[1])
       catch err
-        console.log err
         @emit('MESSAGE:ADD', err.message)
     else
-      console.log "all done"
       @emit('MESSAGE:ADD', "ALL DONE!")
 
-  done: ->
-    console.log "done"
-    @clearQueue()
+  done: -> @clearQueue()
 
   updateBranches: (payload, callback) ->
     self = this
@@ -187,7 +182,6 @@ class Github extends EventEmitter
     payload.version = version ? "nil"
 
   getBranchVersion: (repo, payload, branch, callback) ->
-    console.log "getBranchVersion"
     self = this
     repo.contents 'toc.xml', branch.name, (err, data, headers) =>
       if err && err.statusCode == 403
@@ -207,7 +201,6 @@ class Github extends EventEmitter
 
   setBranchVersion: (payload, branch, version, callback) ->
     b = _.findWhere(payload.branches, {name: branch.name})
-    console.log "setBranchVersion", "#{payload.name}:#{b.name} = #{version}"
     _.extend(branch, {version: version})
     @setMasterVersion(payload, version) if branch.name == "master"
     callback.apply(this) if callback
