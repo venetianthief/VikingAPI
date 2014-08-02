@@ -46,6 +46,7 @@ class Github extends EventEmitter
     "VikingDatachron"
     "VikingDocs"
     "vikinghug.com"
+    "VikingQuestTracker"
     "VikingRaidFrame"
     "VikingSet"
     "VikingStalkerResource"
