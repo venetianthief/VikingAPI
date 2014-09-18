@@ -39,6 +39,7 @@ cs.set
 class Github extends EventEmitter
 
   blacklist: [
+    "VikingActionBarFrame"
     "AddonDownloader"
     "VikingAPI"
     "VikingBuddies"
