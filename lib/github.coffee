@@ -51,6 +51,7 @@ class Github extends EventEmitter
     "VikingSet"
     "VikingStalkerResource"
     "VikingWarriorResource"
+    "Jarod"
   ]
 
   whitelist: []

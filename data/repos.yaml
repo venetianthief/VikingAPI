@@ -105,3 +105,7 @@
 - name: VikingXPBar
   version: 0.0.1
   keep: true
+
+- name: Jarod
+  version: 0.0.1
+  keep: false
