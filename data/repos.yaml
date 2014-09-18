@@ -4,7 +4,7 @@
 
 - name: VikingActionBarFrame
   version: 0.0.1
-  keep: true
+  keep: false
 
 - name: VikingActionBarShortcut
   version: 0.0.1
