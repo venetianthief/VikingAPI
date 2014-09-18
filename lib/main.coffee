@@ -6,7 +6,7 @@ cs        = require('calmsoul')
 REPL      = require('repl')
 net       = require('net')
 
-gh        = new Github('venetianthief')
+gh        = new Github('vikinghug')
 webserver = new WebServer(gh)
 
 class Main
